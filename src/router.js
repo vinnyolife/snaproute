@@ -1,69 +1,80 @@
-/**
- * snaproute - Lightweight client-side router
- */
+import { createMiddlewarePipeline } from './middleware.js';
 
-function createRouter() {
+export function createRouter(options = {}) {
   const routes = [];
-  let notFoundHandler = null;
+  const pipeline = createMiddlewarePipeline();
+  const { base = '' } = options;
 
   function addRoute(path, handler) {
-    const keys = [];
+    const paramNames = [];
     const pattern = path
-      .replace(/:([a-zA-Z_][a-zA-Z0-9_]*)/g, (_, key) => {
-        keys.push(key);
-        return '([^\/]+)';
+      .replace(/:([a-zA-Z]+)/g, (_, name) => {
+        paramNames.push(name);
+        return '([^/]+)';
       })
-      .replace(/\//g, '\\/');
+      .replace(/\*/g, '.*');
 
     routes.push({
       path,
-      pattern: new RegExp(`^${pattern}$`),
-      keys,
+      pattern: new RegExp(`^${base}${pattern}$`),
+      paramNames,
       handler,
     });
   }
 
   function resolve(url) {
-    const [pathname] = url.split('?');
+    const [path, queryString] = url.split('?');
+    const query = {};
+    if (queryString) {
+      queryString.split('&').forEach((pair) => {
+        const [k, v] = pair.split('=');
+        if (k) query[decodeURIComponent(k)] = decodeURIComponent(v || '');
+      });
+    }
 
     for (const route of routes) {
-      const match = pathname.match(route.pattern);
+      const match = path.match(route.pattern);
       if (match) {
         const params = {};
-        route.keys.forEach((key, i) => {
-          params[key] = decodeURIComponent(match[i + 1]);
+        route.paramNames.forEach((name, i) => {
+          params[name] = match[i + 1];
         });
-        return { handler: route.handler, params };
+        return { route, params, query, path };
       }
     }
-
-    return notFoundHandler ? { handler: notFoundHandler, params: {} } : null;
+    return null;
   }
 
-  function navigate(path) {
-    window.history.pushState({}, '', path);
-    dispatch(path);
+  function dispatch(url) {
+    const match = resolve(url);
+    if (!match) return;
+
+    const context = { path: match.path, params: match.params, query: match.query };
+
+    pipeline.run(context, (err) => {
+      if (err) {
+        if (context.redirect) navigate(context.redirect);
+        return;
+      }
+      match.route.handler(context);
+    });
   }
 
-  function dispatch(path) {
-    const result = resolve(path);
-    if (result) {
-      result.handler({ params: result.params, path });
-    }
+  function navigate(url) {
+    history.pushState(null, '', url);
+    dispatch(url);
+  }
+
+  function use(fn) {
+    pipeline.use(fn);
+    return router;
   }
 
   function listen() {
-    window.addEventListener('popstate', () => {
-      dispatch(window.location.pathname);
-    });
-    dispatch(window.location.pathname);
+    window.addEventListener('popstate', () => dispatch(location.pathname + location.search));
+    dispatch(location.pathname + location.search);
   }
 
-  function onNotFound(handler) {
-    notFoundHandler = handler;
-  }
-
-  return { addRoute, navigate, listen, onNotFound, resolve };
+  const router = { addRoute, resolve, navigate, dispatch, use, listen };
+  return router;
 }
-
-export { createRouter };
