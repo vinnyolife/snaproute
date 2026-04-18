@@ -44,7 +44,12 @@ export function createHooks() {
     }
   }
 
+  /**
+   * Runs all onError hooks. If no onError hooks are registered, re-throws
+   * the error so it isn't silently swallowed.
+   */
   async function runOnError(err, to, from) {
+    if (hooks.onError.length === 0) throw err;
     for (const fn of hooks.onError) {
       await fn(err, to, from);
     }
