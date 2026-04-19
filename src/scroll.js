@@ -7,6 +7,7 @@ export function createScrollManager(options = {}) {
   const positions = new Map();
 
   function save(path) {
+    if (typeof path !== 'string' || !path) return;
     positions.set(path, {
       x: window.scrollX,
       y: window.scrollY,
@@ -43,5 +44,11 @@ export function createScrollManager(options = {}) {
     return positions.size;
   }
 
-  return { save, restore, scrollToTop, clear, has, size };
+  /** Returns a copy of the saved position for the given path, or null if not found */
+  function get(path) {
+    const pos = positions.get(path);
+    return pos ? { ...pos } : null;
+  }
+
+  return { save, restore, scrollToTop, clear, has, size, get };
 }
