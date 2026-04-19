@@ -64,4 +64,14 @@ describe('createPrefetchManager', () => {
     expect(manager.isPrefetched('bad')).toBe(false);
     expect(manager.isPending('bad')).toBe(false);
   });
+
+  test('size reflects number of prefetched routes', async () => {
+    expect(manager.size()).toBe(0);
+    await manager.prefetch('a', () => Promise.resolve(1));
+    expect(manager.size()).toBe(1);
+    await manager.prefetch('b', () => Promise.resolve(2));
+    expect(manager.size()).toBe(2);
+    manager.clear('a');
+    expect(manager.size()).toBe(1);
+  });
 });
