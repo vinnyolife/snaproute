@@ -51,3 +51,14 @@ export function parseQuery(search = '') {
   });
   return query;
 }
+
+/**
+ * Serialize a plain object into a query string (e.g. { foo: 'bar', baz: 1 } => '?foo=bar&baz=1').
+ * Returns an empty string if the object has no entries.
+ */
+export function stringifyQuery(params = {}) {
+  const pairs = Object.entries(params)
+    .filter(([, val]) => val !== undefined && val !== null)
+    .map(([key, val]) => `${encodeURIComponent(key)}=${encodeURIComponent(val)}`);
+  return pairs.length ? `?${pairs.join('&')}` : '';
+}
