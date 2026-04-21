@@ -62,3 +62,22 @@ export function stringifyQuery(params = {}) {
     .map(([key, val]) => `${encodeURIComponent(key)}=${encodeURIComponent(val)}`);
   return pairs.length ? `?${pairs.join('&')}` : '';
 }
+
+/**
+ * Build a path string from a route pattern and a params object.
+ * Replaces named segments like ':id' with the corresponding value from params.
+ * Throws if a required param is missing.
+ *
+ * @example
+ * buildPath('/users/:id/posts/:postId', { id: '42', postId: '7' })
+ * // => '/users/42/posts/7'
+ */
+export function buildPath(pattern, params = {}) {
+  return pattern.replace(/:[^/]+/g, (match) => {
+    const key = match.slice(1);
+    if (params[key] === undefined || params[key] === null) {
+      throw new Error(`Missing required param "${key}" for pattern "${pattern}"`);
+    }
+    return encodeURIComponent(params[key]);
+  });
+}
