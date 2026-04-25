@@ -70,3 +70,16 @@ test('size reflects number of tagged routes', () => {
 test('getTags returns empty array for unknown route', () => {
   expect(tags.getTags('/unknown')).toEqual([]);
 });
+
+test('add is idempotent - duplicate tags are not added twice', () => {
+  tags.add('/home', 'public', 'public');
+  const routeTags = tags.getTags('/home');
+  const publicCount = routeTags.filter(t => t === 'public').length;
+  expect(publicCount).toBe(1);
+
+  // calling add again with the same tag should not duplicate it
+  tags.add('/home', 'public');
+  const routeTagsAfter = tags.getTags('/home');
+  const publicCountAfter = routeTagsAfter.filter(t => t === 'public').length;
+  expect(publicCountAfter).toBe(1);
+});
